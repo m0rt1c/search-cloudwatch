@@ -34,6 +34,7 @@ function print_help {
     echo -e "\t-f\toutput format default is text, can be text, json, csv"
     echo -e "\t-g\trules file to be used with grep -f"
     echo -e "\t-h\tshow this help message and exit"
+    echo -e "\t-i\tcreates init file sample in local directory and exit"
     echo -e "\t-o\tsearch online instead of downloading the logs locally"
     echo -e "\t-r\tchange region, default is us-east-1"
     echo -e "\t-y\tskips user check"
@@ -342,10 +343,26 @@ if [ "$#" -lt 1 ] || ([ "$#" -eq 1 ] && [ "$1" == "--help" ]); then
     exit 0
 fi
 
-while getopts ":c:d:f:g:hor:yx:" opt; do
+while getopts ":c:d:f:g:hior:yx:" opt; do
     case $opt in
     c)
         CONF="$OPTARG"
+        if [ "$CONF" != "" ]; then
+            CHECK_USER=$(parse-ini-bool "CHECK_USER")
+            FORMAT=$(parse-ini-string "FORMAT")
+            LOG_GROUPS=($(parse-ini-array "LOG_GROUPS"))
+            ONLINE=$(parse-ini-bool "ONLINE")
+            OUT_DIRECOTRY=$(parse-ini-string "OUT_DIRECOTRY")
+            PROFILES=($(parse-ini-array "PROFILES"))
+            REGION=$(parse-ini-string "REGION")
+            RULES_FILE=$(parse-ini-string "RULES_FILE")
+
+            DELTA=$(parse-ini-string "DELTA")
+            LOGS_END_TIME=$(parse-ini-string "LOGS_END_TIME")
+            LOGS_START_TIME=$(parse-ini-string "LOGS_START_TIME")
+            MAX_LOG_STREAMS=$(parse-ini-string "MAX_LOG_STREAMS")
+            MAX_STREAM_EVENTS=$(parse-ini-string "MAX_STREAM_EVENTS")
+        fi
         ;;
     d)
         OUT_DIRECOTRY="$OPTARG"
@@ -358,6 +375,51 @@ while getopts ":c:d:f:g:hor:yx:" opt; do
         ;;
     h)
         print_help
+        exit 0
+        ;;
+    i)
+        file=search-logs.ini
+        if [ -s $file ]; then
+            echo "$file already existst creating in a random file"
+            file=search-logs-$RANDOM.ini
+        fi
+        echo "[search logs]
+; supported formats are json, csv and text (unformatted)
+FORMAT=$FORMAT
+; if online is false, the log events will be donwloaded and searched locally
+; if online is true, the logs will be searched online
+; offline is slower the first time but subsquent search with different rule files or the same are faster
+ONLINE=$ONLINE
+OUT_DIRECOTRY=$OUT_DIRECOTRY
+; Full path of rules file
+RULES_FILE=$RULES_FILE
+; before downloading the logs the script will prompt if you want to continue
+; with some user information so that you can verify that you are using the correct profile
+; if set to false this check will be skipped
+CHECK_USER=False
+
+[aws]
+REGION=$REGION
+; arrays format must be [a, b, c]
+; make sure that the groups exists for the selected profile
+; leave empty to search all groups
+LOG_GROUPS=$LOG_GROUPS
+; list of awscli profiles
+PROFILES=[$PROFILES]
+; for offline search you can specify the maximum number of stream and events downloaded
+; set to 0 to ingore them
+MAX_LOG_STREAMS=$MAX_LOG_STREAMS
+MAX_STREAM_EVENTS=$MAX_STREAM_EVENTS
+; dates format must be in milliseconds like 1651247860983, for example with `date +%s%3N`
+; Events with a time-stamp earlier than this time are not included
+; if not set will be now-delta 
+LOGS_START_TIME=$LOGS_END_TIME
+; Events with a timestamp equal to or later than this time are not included
+; if not set will be empty so up to the most recent one
+LOGS_END_TIME=$LOGS_START_TIME
+; delta to be subtracted from now if logs start time is not set, default is two weeks
+DELTA=$DELTA" > $file
+        echo "created file $file"
         exit 0
         ;;
     o)
@@ -387,23 +449,6 @@ while getopts ":c:d:f:g:hor:yx:" opt; do
     esac
 done
 shift $((OPTIND - 1))
-
-if [ "$CONF" != "" ]; then
-    CHECK_USER=$(parse-ini-bool "CHECK_USER")
-    FORMAT=$(parse-ini-string "FORMAT")
-    LOG_GROUPS=($(parse-ini-array "LOG_GROUPS"))
-    ONLINE=$(parse-ini-bool "ONLINE")
-    OUT_DIRECOTRY=$(parse-ini-string "OUT_DIRECOTRY")
-    PROFILES=($(parse-ini-array "PROFILES"))
-    REGION=$(parse-ini-string "REGION")
-    RULES_FILE=$(parse-ini-string "RULES_FILE")
-
-    DELTA=$(parse-ini-string "DELTA")
-    LOGS_END_TIME=$(parse-ini-string "LOGS_END_TIME")
-    LOGS_START_TIME=$(parse-ini-string "LOGS_START_TIME")
-    MAX_LOG_STREAMS=$(parse-ini-string "MAX_LOG_STREAMS")
-    MAX_STREAM_EVENTS=$(parse-ini-string "MAX_STREAM_EVENTS")
-fi
 
 if [ "$FORMAT" != "text" ] && [ "$FORMAT" != "json" ] && [ "$FORMAT" != "csv" ]; then
     echo "invalid format $FORMAT"

@@ -11,7 +11,21 @@ Work in progress. The main features are implemented but lacks testing.
 The scripts should only require [aws-cli](https://github.com/aws/aws-cli/) as a dependecy.
 
 ## Configure
-Copy and edit `search-logs.ini` according to your configuration.
+
+1. Create a config file
+
+    ```bash
+    ./search-logs.sh -i
+    ```
+
+    or
+
+    ```bash
+    ./search-logs.sh -r eu-west-1 -i
+    ```
+
+2. Edit that file according to your configuration.
+
 Here is an example:
 ```ini
 [search logs]
