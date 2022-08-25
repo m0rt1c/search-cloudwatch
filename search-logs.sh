@@ -74,7 +74,7 @@ function encode-json {
 }
 
 function parse-ini-string {
-    grep $1 $CONF | sed 's/ = /=/g' | cut -d "=" -f2 | tr -d '\n'
+    grep $1 $CONF | sed 's/ ?= ?/=/g' | cut -d "=" -f2 | tr -d '\n'
 }
 
 function parse-ini-bool {
@@ -109,6 +109,22 @@ function write_text_out {
     echo "$VALUES_OUT_ID:" | tee -a $search_out_file
     grep_values $4 | tee -a $search_out_file
     echo -e "$URL_OUT_ID: \n$(format_cloudwatch_url $5 $6)" | tee -a $search_out_file
+}
+
+function write_html {
+    div_file=$1.div
+    events_file=$2
+    group=$3
+    stream=$4
+
+    div="""<div class='match'>
+        <span>Group: $group Stream: $stream</span>
+        <span>Matched values: $(grep_values $events_file)</span>
+        <a href='"$(format_cloudwatch_url $group $stream)"' target='_blank'>Open stream in cloud watch</a>
+        <a href='file://"$events_file"' target='_blank'>Open log</a>
+    </div>
+    """
+    echo -e $div > $div_file
 }
 
 # the first time we omit the comma before the element
@@ -294,7 +310,7 @@ function local-search {
     JSON_COMMA=""
 
     write_out_header $search_out_file
-    for group in $LOG_GROUPS; do
+    for group in ${LOG_GROUPS[@]}; do
         echo "Reading log: $group" >>$search_log_file
         workdir=$out_dir/${group#"$prefix"}
         mkdir -p $workdir
@@ -308,6 +324,7 @@ function local-search {
             if [ "$MAX_LOG_STREAMS" -ne 0 ]; then
                 max_items="--max-items $MAX_LOG_STREAMS"
             fi
+            # echo aws logs describe-log-streams --log-group-name "$group" --order-by LastEventTime --descending $max_items --profile $profile --region $REGION
             aws logs describe-log-streams --log-group-name "$group" --order-by LastEventTime --descending $max_items --profile $profile --region $REGION >$streams_file
         fi
         streamsid=$workdir/.stream-ids
@@ -326,9 +343,10 @@ function local-search {
                 aws logs get-log-events --log-group-name "$group" --log-stream-name $stream $limit $(start_time_option) $(end_time_option) --start-from-head --profile $profile --region $REGION >$events_file
             fi
             matches_file=$workdir/matches/$(basename $stream)-matches.log
-            grep -f $RULES_FILE -E $events_file >$matches_file
+            grep -f $RULES_FILE -E $events_file > $matches_file
             if [ -s $matches_file ]; then
                 write_out $search_out_file $profile $matches_file $events_file $group $stream
+                write_html $matches_file $events_file $group $stream
             else
                 rm $matches_file
             fi
@@ -410,7 +428,7 @@ PROFILES=[$PROFILES]
 ; set to 0 to ingore them
 MAX_LOG_STREAMS=$MAX_LOG_STREAMS
 MAX_STREAM_EVENTS=$MAX_STREAM_EVENTS
-; dates format must be in milliseconds like 1651247860983, for example with `date +%s%3N`
+; dates format must be in milliseconds like 1651247860983, for example with $(date +%s%3N)
 ; Events with a time-stamp earlier than this time are not included
 ; if not set will be now-delta 
 LOGS_START_TIME=$LOGS_END_TIME
@@ -418,7 +436,7 @@ LOGS_START_TIME=$LOGS_END_TIME
 ; if not set will be empty so up to the most recent one
 LOGS_END_TIME=$LOGS_START_TIME
 ; delta to be subtracted from now if logs start time is not set, default is two weeks
-DELTA=$DELTA" > $file
+DELTA=$DELTA" >$file
         echo "created file $file"
         exit 0
         ;;
@@ -460,8 +478,9 @@ if [ ${#PROFILES[@]} -eq 0 ]; then
     PROFILES="$@"
 fi
 
-# set -x
-for profile in $PROFILES; do
+export PYTHONWARNINGS="ignore:Unverified HTTPS request"
+
+for profile in ${PROFILES[@]}; do
 
     if $CHECK_USER; then
         echo "Checking user..."
@@ -474,7 +493,12 @@ for profile in $PROFILES; do
         fi
     fi
 
-    if [ ${#LOG_GROUPS[@]} -eq 0 ]; then
+    c=0
+    for i in ${LOG_GROUPS[@]}; do
+        c=$((c + 1))
+    done
+
+    if [ $c -eq 0 ]; then
         LOG_GROUPS=$(aws logs describe-log-groups --profile $profile --region $REGION | jq -r '.logGroups[].logGroupName' | tr '\n' ' ')
     fi
 
