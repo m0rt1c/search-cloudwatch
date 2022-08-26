@@ -2,14 +2,36 @@
 
 MAX_MATCH_PER_PG=20
 WORKDIR=$(pwd)
-RES=$WORKDIR/res
+
+while getopts ":m:w:" opt; do
+    case $opt in
+    m)
+        MAX_MATCH_PER_PG=$OPTARG
+        ;;
+    w)
+        WORKDIR="$OPTARG"
+        ;;
+    \?)
+        echo "Invalid option -$OPTARG" >&2
+        exit 1
+        ;;
+    esac
+    case $OPTARG in
+    -*)
+        echo "Option $opt needs a valid argument"
+        exit 1
+        ;;
+    esac
+done
+
+RES="$WORKDIR/res"
 
 if [ ! -d $RES ]; then
     mkdir -p $RES
 fi
 
 MATCHES=$RES/.matches.txt
-find -type f -name '*.div*' > $MATCHES
+find $WORKDIR -type f -name '*.match' > $MATCHES
 
 HTML_HEADER="""<!DOCTYPE html>
 <html>
@@ -29,15 +51,32 @@ HTML_TRAILER="""</div>
 
 PGCOUNT=0
 ctr=0
-tdivs=/tmp/.divs
+tdivs=$(tempfile)
 
 while read line
 do
-    cat $line >> $tdivs
+    group=$(cat $line | sed -n '1p') 
+    stream=$(cat $line | sed -n '2p') 
+    event_file_path=$(cat $line | sed -n '3p') 
+    cloudwatch_url=$(cat $line | sed -n '4p') 
+    keywords_matched=$(cat $line | sed -n '5p') 
+
+    echo """
+    <div>
+        <ul>
+            <li>$keywords_matched</li>
+            <li><a href='$cloudwatch_url' target='_blank'>Open stream in CloudWatch</a></li>
+            <li>$group</li>
+            <li>$stream</li>
+            <li><a href='$event_file_path' target='_blank'>Open stream file</a></li>
+        </ul>
+    </div>
+    """ >> $tdivs
+
     ctr=$(($ctr + 1))
 
     if [ $ctr -eq $MAX_MATCH_PER_PG ]; then
-        echo """$HTML_HEADER$(cat $tdivs)$HTML_TRAILER""" > $RES/page-$PGCOUNT.html
+        echo """$HTML_HEADER<div class='mh'>$(cat $tdivs)</div>$HTML_TRAILER""" > $RES/page-$PGCOUNT.html
         ctr=0
         PGCOUNT=$(($PGCOUNT + 1))
         rm $tdivs
@@ -50,7 +89,7 @@ echo """$HTML_HEADER
                 <button onclick='changeDir(-1)' >&lt;</button>
                 <button onclick='changeDir(1)' >&gt;</button>
             </div>
-$HTML_TRAILER""" > index.html
+$HTML_TRAILER""" > $WORKDIR/index.html
 
 echo """
 .ctn {
@@ -63,6 +102,10 @@ echo """
     flex-flow: row;
     justify-content: space-evenly;
 }
+.mh {
+    display: flex;
+    flex-wrap: wrap;
+}
 """ > "$RES"/style.css
 
 PGCOUNT=$(($PGCOUNT - 1))
@@ -70,7 +113,7 @@ PGCOUNT=$(($PGCOUNT - 1))
 echo """
 var basePath = '"$RES"'
 var ctr = 0
-var ctrMax = '"$PGCOUNT"'
+var ctrMax = "$PGCOUNT"
 
 function changeDir(i) {
     ctr += i

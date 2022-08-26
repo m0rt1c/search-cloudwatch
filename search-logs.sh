@@ -111,20 +111,14 @@ function write_text_out {
     echo -e "$URL_OUT_ID: \n$(format_cloudwatch_url $5 $6)" | tee -a $search_out_file
 }
 
-function write_html {
-    div_file=$1.div
+function store_match {
+    match_file=$1.match
     events_file=$2
     group=$3
     stream=$4
 
-    div="""<div class='match'>
-        <span>Group: $group Stream: $stream</span>
-        <span>Matched values: $(grep_values $events_file)</span>
-        <a href='"$(format_cloudwatch_url $group $stream)"' target='_blank'>Open stream in cloud watch</a>
-        <a href='file://"$events_file"' target='_blank'>Open log</a>
-    </div>
-    """
-    echo -e $div > $div_file
+    match="$group\n$stream\n$events_file\n$(format_cloudwatch_url $group $stream)\n$(grep_values $events_file)"
+    echo -e $match > $match_file
 }
 
 # the first time we omit the comma before the element
@@ -346,7 +340,7 @@ function local-search {
             grep -f $RULES_FILE -E $events_file > $matches_file
             if [ -s $matches_file ]; then
                 write_out $search_out_file $profile $matches_file $events_file $group $stream
-                write_html $matches_file $events_file $group $stream
+                store_match $matches_file $events_file $group $stream
             else
                 rm $matches_file
             fi
