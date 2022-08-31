@@ -3,6 +3,10 @@
 MAX_MATCH_PER_PG=20
 WORKDIR=$(pwd)
 
+function html_escape {
+    echo $1 | tr -d "\\<>'\""
+}
+
 while getopts ":m:w:" opt; do
     case $opt in
     m)
@@ -64,11 +68,11 @@ do
     echo """
     <div>
         <ul>
-            <li>$keywords_matched</li>
-            <li><a href='$cloudwatch_url' target='_blank'>Open stream in CloudWatch</a></li>
-            <li>$group</li>
-            <li>$stream</li>
-            <li><a href='$event_file_path' target='_blank'>Open stream file</a></li>
+            <li>$( html_escape $keywords_matched )</li>
+            <li><a href='$( html_escape $cloudwatch_url )' target='_blank'>Open stream in CloudWatch</a></li>
+            <li>$( html_escape $group )</li>
+            <li>$( html_escape $stream )</li>
+            <li><a href='$( html_escape $event_file_path )' target='_blank'>Open stream file</a></li>
         </ul>
     </div>
     """ >> $tdivs
