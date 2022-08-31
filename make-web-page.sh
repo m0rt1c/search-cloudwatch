@@ -4,7 +4,7 @@ MAX_MATCH_PER_PG=20
 WORKDIR=$(pwd)
 
 function html_escape {
-    echo $1 | tr -d "\\<>'\""
+    echo $1 | tr -d "\\<>'\"" | sed 's/[tT]:\/\///g'
 }
 
 while getopts ":m:w:" opt; do
@@ -59,8 +59,17 @@ tdivs=$(tempfile)
 
 while read line
 do
+    echo $line
     group=$(cat $line | sed -n '1p') 
+
+
     stream=$(cat $line | sed -n '2p') 
+    echo $group
+
+    if [ "$group" = "EXPLOIT" ]; then
+        set -x
+    fi
+
     event_file_path=$(cat $line | sed -n '3p') 
     cloudwatch_url=$(cat $line | sed -n '4p') 
     keywords_matched=$(cat $line | sed -n '5p') 
@@ -86,6 +95,13 @@ do
         rm $tdivs
     fi
 done < $MATCHES 
+
+if [ -f $tdivs ]; then
+    echo """$HTML_HEADER<div class='mh'>$(cat $tdivs)</div>$HTML_TRAILER""" > $RES/page-$PGCOUNT.html
+    ctr=0
+    PGCOUNT=$(($PGCOUNT + 1))
+    rm $tdivs
+fi
 
 echo """$HTML_HEADER
             <iframe id='pgctn' style='height: 90vh;' src='"$RES/page-0.html"'></iframe>
