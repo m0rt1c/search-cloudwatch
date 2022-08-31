@@ -4,7 +4,7 @@ MAX_MATCH_PER_PG=20
 WORKDIR=$(pwd)
 
 function html_escape {
-    echo $1 | tr -d "\\<>'\"" | sed 's/[tT]:\/\///g'
+    echo $@ | tr -d "\\<>'\"" | sed 's/[tT]:\/\///g'
 }
 
 while getopts ":m:w:" opt; do
@@ -59,20 +59,11 @@ tdivs=$(tempfile)
 
 while read line
 do
-    echo $line
     group=$(cat $line | sed -n '1p') 
-
-
-    stream=$(cat $line | sed -n '2p') 
-    echo $group
-
-    if [ "$group" = "EXPLOIT" ]; then
-        set -x
-    fi
-
+    stream=$(cat $line | sed -n '2p')
     event_file_path=$(cat $line | sed -n '3p') 
     cloudwatch_url=$(cat $line | sed -n '4p') 
-    keywords_matched=$(cat $line | sed -n '5p') 
+    keywords_matched=$(cat $line | sed -n '5p')
 
     echo """
     <div>
@@ -85,6 +76,7 @@ do
         </ul>
     </div>
     """ >> $tdivs
+
 
     ctr=$(($ctr + 1))
 
