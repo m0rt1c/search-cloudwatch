@@ -49,6 +49,8 @@ REGION=us-east-1
 ; make sure that the groups exists for the selected profile
 ; leave empty to search all groups
 LOG_GROUPS=
+; regex to filter log group names leave empty to match all log groups
+LOG_GROUPS_REGEX=
 ; list of awscli profiles
 PROFILES=[default, test]
 ; for offline search you can specify the maximum number of stream and events downloaded

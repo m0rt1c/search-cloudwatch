@@ -5,6 +5,7 @@ CHECK_USER=true
 EXPORT_URL=""
 FORMAT="json"
 LOG_GROUPS=()
+LOG_GROUPS_REGEX=""
 ONLINE=false
 OUT_DIRECOTRY=$(pwd)
 PROFILES=()
@@ -74,7 +75,7 @@ function encode-json {
 }
 
 function parse-ini-string {
-    grep $1 $CONF | sed 's/ ?= ?/=/g' | cut -d "=" -f2 | tr -d '\n'
+    grep -E "$1 ?=" $CONF | sed 's/ ?= ?/=/g' | cut -d "=" -f2 | tr -d '\n'
 }
 
 function parse-ini-bool {
@@ -305,6 +306,11 @@ function local-search {
 
     write_out_header $search_out_file
     for group in ${LOG_GROUPS[@]}; do
+        if [ "$LOG_GROUPS_REGEX" != "" ]; then
+            if [[ ! $group =~ $LOG_GROUPS_REGEX ]]; then
+                continue
+            fi
+        fi
         echo "Reading log: $group" >>$search_log_file
         workdir=$out_dir/${group#"$prefix"}
         mkdir -p $workdir
@@ -363,6 +369,7 @@ while getopts ":c:d:f:g:hior:yx:" opt; do
             CHECK_USER=$(parse-ini-bool "CHECK_USER")
             FORMAT=$(parse-ini-string "FORMAT")
             LOG_GROUPS=($(parse-ini-array "LOG_GROUPS"))
+            LOG_GROUPS_REGEX=$(parse-ini-string "LOG_GROUPS_REGEX")
             ONLINE=$(parse-ini-bool "ONLINE")
             OUT_DIRECOTRY=$(parse-ini-string "OUT_DIRECOTRY")
             PROFILES=($(parse-ini-array "PROFILES"))
@@ -416,6 +423,8 @@ REGION=$REGION
 ; make sure that the groups exists for the selected profile
 ; leave empty to search all groups
 LOG_GROUPS=$LOG_GROUPS
+; regex to filter log group names leave empty to match all log groups
+LOG_GROUPS_REGEX=$LOG_GROUPS_REGEX
 ; list of awscli profiles
 PROFILES=[$PROFILES]
 ; for offline search you can specify the maximum number of stream and events downloaded
