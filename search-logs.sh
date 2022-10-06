@@ -2,6 +2,7 @@
 
 CONF=""
 CHECK_USER=true
+DEBUG=false
 EXPORT_URL=""
 FORMAT="json"
 LOG_GROUPS=()
@@ -361,12 +362,13 @@ if [ "$#" -lt 1 ] || ([ "$#" -eq 1 ] && [ "$1" == "--help" ]); then
     exit 0
 fi
 
-while getopts ":c:d:f:g:hior:yx:" opt; do
+while getopts ":c:d:f:g:hior:vyx:" opt; do
     case $opt in
     c)
         CONF="$OPTARG"
         if [ "$CONF" != "" ]; then
             CHECK_USER=$(parse-ini-bool "CHECK_USER")
+            DEBUG=$(parse-ini-bool "DEBUG")
             FORMAT=$(parse-ini-string "FORMAT")
             LOG_GROUPS=($(parse-ini-array "LOG_GROUPS"))
             LOG_GROUPS_REGEX=$(parse-ini-string "LOG_GROUPS_REGEX")
@@ -416,6 +418,8 @@ RULES_FILE=$RULES_FILE
 ; with some user information so that you can verify that you are using the correct profile
 ; if set to false this check will be skipped
 CHECK_USER=False
+; will set 'set -x'
+DEBUG=False
 
 [aws]
 REGION=$REGION
@@ -449,6 +453,9 @@ DELTA=$DELTA" >$file
     r)
         REGION="$OPTARG"
         ;;
+    v)
+        DEBUG=true
+        ;;
     y)
         CHECK_USER=false
         ;;
@@ -470,6 +477,10 @@ DELTA=$DELTA" >$file
     esac
 done
 shift $((OPTIND - 1))
+
+if $DEBUG; then
+    set -x
+fi
 
 if [ "$FORMAT" != "text" ] && [ "$FORMAT" != "json" ] && [ "$FORMAT" != "csv" ]; then
     echo "invalid format $FORMAT"
