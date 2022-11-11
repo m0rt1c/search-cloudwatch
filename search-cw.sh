@@ -28,7 +28,7 @@ URL_OUT_ID="Cloud Watch Log Stream URL"
 VALUES_OUT_ID="Matching Values"
 
 function print_help {
-    echo "usage: search-logs.sh [OPTIONS <profile 1> <profile 2> ... ]"
+    echo "usage: search-cw.sh [OPTIONS <profile 1> <profile 2> ... ]"
     echo "configuration file or at least one profile is required"
     echo "optional arguments:"
     echo -e "\t-c\tconfig file path"
@@ -399,10 +399,10 @@ while getopts ":c:d:f:g:hior:vyx:" opt; do
         exit 0
         ;;
     i)
-        file=search-logs.ini
+        file=search-cw.ini
         if [ -s $file ]; then
             echo "$file already existst creating in a random file"
-            file=search-logs-$RANDOM.ini
+            file=search-cw-$RANDOM.ini
         fi
         echo "[search logs]
 ; supported formats are json, csv and text (unformatted)
