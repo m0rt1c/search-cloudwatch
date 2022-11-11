@@ -75,6 +75,14 @@ DELTA=10000
 ./search-cw.sh -c ./search-cw.ini
 ```
 
+### Run on all regions workaround script
+
+``` bash
+while read region
+    do ./search-cw.sh -c ./search-cw.ini -r $region
+done < utils/regions.txt
+```
+
 ## View Results
 
 The results will be divided for each account and each reagion in a file with a path like this '$OUT_DIRECOTRY/$PROFILE/$REGION/local-scan.json'.
