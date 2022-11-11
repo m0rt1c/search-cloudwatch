@@ -1,27 +1,27 @@
-# Search logs
+# Search CloudWatch
 A bash script to search cloudwatch logs of multiple accounts from the command line.
 
 ## What is it searching?
 The tool will search and report findings according to a rule file that you chose. A default file is in `rules.txt` found in this repo.
 
 ## Project Status
-Work in progress. The main features are implemented but lacks testing.
+Work in progress. The main features are implemented but lack testing.
 
 ## Install
-The scripts should only require [aws-cli](https://github.com/aws/aws-cli/) as a dependecy.
+The scripts should only require [aws-cli](https://github.com/aws/aws-cli/) as a dependency.
 
 ## Configure
 
 1. Create a config file
 
     ```bash
-    ./search-logs.sh -i
+    ./search-cw.sh -i
     ```
 
     or
 
     ```bash
-    ./search-logs.sh -r eu-west-1 -i
+    ./search-cw.sh -r eu-west-1 -i
     ```
 
 2. Edit that file according to your configuration.
@@ -37,11 +37,13 @@ FORMAT=json
 ONLINE=False
 OUT_DIRECOTRY=.
 ; Full path of rules file
-RULES_FILE=/home/user/tools/log-checker/rules.txt
+RULES_FILE=/home/user/tools/search-cloudwatch/rules.txt
 ; before downloading the logs the script will prompt if you want to continue
 ; with some user information so that you can verify that you are using the correct profile
 ; if set to false this check will be skipped
 CHECK_USER=False
+; will set 'set -x'
+DEBUG=False
 
 [aws]
 REGION=us-east-1
@@ -67,31 +69,31 @@ LOGS_END_TIME=
 DELTA=10000
 ```
 
+## Run
+
+```bash
+./search-cw.sh -c ./search-cw.ini
+```
+
+## View Results
+
+The results will be divided for each account and each reagion in a file with a path like this '$OUT_DIRECOTRY/$PROFILE/$REGION/local-scan.json'.
+
+An exeprimentail web page is being developend and the script to generate the html pages can found in './utils' folder.
+
 ## Operation Modes
 
-### 1. Online
-* Will run log insight queries on aws services
-* Will not download files
-* There is a maximum of allowed parralel queries online set by aws
-* You need to wait for the query to complete to see the results
-* Each time you run the script aws needs to recompute the query search
-* If the query timesout or the connection fails all the progress will be lost
-
-### 2. Offline (Default)
-* Will run grep on the downloaded events with the speficied ruleset
+### 1. Offline (Default)
+* Will run grep on the downloaded events with the specified rule set
 * Will download the logs events
-* The logs are donwloaded one at a time
+* The logs are downloaded one at a time
 * Results are reported as soon as the events are downloaded
 * Each time you run the script the old events files will be reused and the new one downloaded
 * Progress is kept by keeping the files on the disk
 
-## Run
-```bash
-./search-logs.sh -c ./search-logs.ini
-```
 
-## Offline Mode Output
-The tool will create the following files and direcories inside `OUT_DIRECOTRY`. The tool output will printed on the stdout and in `local-scan.FORMAT` file, in this case `FORMAT` is json.
+#### Offline Mode Output
+The tool will create the following files and directories inside `OUT_DIRECOTRY`. The tool output will printed on the std out and in `local-scan.FORMAT` file, in this case `FORMAT` is json.
 ```tree
 .
 ├── <profile>
@@ -115,8 +117,16 @@ The tool will create the following files and direcories inside `OUT_DIRECOTRY`. 
 
 ```
 
-## Online Mode Output
-The tool will create the following files and direcories inside `OUT_DIRECOTRY`. The tool output will printed on the stdout and in `local-scan.FORMAT` file, in this case `FORMAT` is json.
+### 2. Online (NOT WORKING AND UNSUPPORTED)
+* Will run log insight queries on aws services
+* Will not download files
+* There is a maximum of allowed parallel queries online set by aws
+* You need to wait for the query to complete to see the results
+* Each time you run the script aws needs to recompute the query search
+* If the query times out or the connection fails all the progress will be lost
+
+#### Online Mode Output
+The tool will create the following files and directories inside `OUT_DIRECOTRY`. The tool output will printed on the std out and in `local-scan.FORMAT` file, in this case `FORMAT` is json.
 ```tree
 .
 ├── <profile>
@@ -137,3 +147,4 @@ The tool will create the following files and direcories inside `OUT_DIRECOTRY`. 
 1. Testing and bug fixing
 2. Improve Output format
 3. Change region to an array of regions
+4. Fix online mode
